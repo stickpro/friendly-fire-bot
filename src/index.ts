@@ -10,11 +10,11 @@ const prisma = new PrismaClient();
 
 async function run() {
   const bot = new Telegraf(telegramApiKey);
-  const httpsHost = "https://2f1f-37-78-231-149.ngrok.io";
+  const {url: httpsHost, port: serverPort} = nconf.get("server");
   bot.telegram.setWebhook(`${httpsHost}/secret-path`);
 
   // @ts-expect-error fixme
-  bot.startWebhook("/secret-path", null, 5000);
+  bot.startWebhook("/secret-path", null, serverPort);
 
   bot.command("init", async (ctx) => {
     // const chats = await prisma.chat.findMany();
@@ -247,4 +247,6 @@ const resultPhrases = [
   "Стоять! Не двигаться! Вы объявлены пидором дня, ",
   "И прекрасный человек дня сегодня... а нет, ошибка, всего-лишь пидор - ",
 ];
+
+
 run();
