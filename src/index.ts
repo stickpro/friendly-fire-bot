@@ -59,9 +59,6 @@ async function run() {
           id: "desc",
         },
       });
-
-      console.log(lastChatPidor)
-
       if (lastChatPidor.length <= 0) {
         if (pidors.length >= 1) {
           await prisma.chatPidors.create({
