@@ -2,32 +2,32 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 model Chat {
-  id             Int           @id @default(autoincrement())
-  active         Boolean       @default(true)
-  telegramChatId BigInt        @unique
-  pidor          PidorOnChat[]
-  Pidor          Pidor[]
+  id             Int          @id @default(autoincrement())
+  active         Boolean      @default(true)
+  telegramChatId BigInt       @unique
+  pidor          Pidor[]
+  chatPidors     ChatPidors[]
 }
 
 model Pidor {
-  id         Int           @id @default(autoincrement())
-  name       String        @db.VarChar(255)
-  userName   String        @db.VarChar(255)
-  telegramId BigInt        @unique
-  pidor      PidorOnChat[]
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(255)
+  userName   String       @db.VarChar(255)
+  telegramId BigInt
+  pidor      ChatPidors[]
   chatId     Int
-  chat       Chat          @relation(fields: [chatId], references: [id])
+  chat       Chat         @relation(fields: [chatId], references: [id])
 
+  @@unique([telegramId, chatId])
 }
 
-model PidorOnChat {
-  chat       Chat     @relation(fields: [chatId], references: [id])
-  chatId     Int
-  pidor      Pidor    @relation(fields: [pidorId], references: [id])
-  pidorId    Int
+model ChatPidors {
+  id         Int      @id @default(autoincrement())
+  chat       Chat?    @relation(fields: [chatId], references: [id])
+  chatId     Int?
+  pidor      Pidor?   @relation(fields: [pidorId], references: [id])
+  pidorId    Int?
   assignedAt DateTime @default(now())
-
-  @@id([chatId, pidorId])
 }
 
 generator client {
