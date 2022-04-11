@@ -37,7 +37,7 @@ async function run() {
     });
 
     if (chat !== null) {
-      const date = Date.now() / 1000 - 10;
+      const date = Date.now() / 1000 - 86400;
       const lastChatPidor = await prisma.chatPidors.findMany({
         where: {
           chatId: chat.id,
@@ -53,17 +53,12 @@ async function run() {
         where: { chat: { id: chat.id } },
       });
 
+      console.log(pidorCount);
+
       const skip = Math.floor(Math.random() * pidorCount);
-      const pidors = await prisma.chatPidors.findMany({
-        take: 1,
+      const pidors = await prisma.pidor.findMany({
         skip: skip,
-        where: { chat: { id: chat.id } },
-        include: {
-          pidor: true,
-        },
-        orderBy: {
-          assignedAt: "desc",
-        },
+        where: { chatId: chat.id },
       });
 
       console.log(pidors);
@@ -73,7 +68,7 @@ async function run() {
           await prisma.chatPidors.create({
             data: {
               chatId: chat.id,
-              pidorId: pidors[0].pidor?.id,
+              pidorId: pidors[0].id,
             },
           });
 
@@ -91,7 +86,7 @@ async function run() {
 
           await ctx.telegram.sendMessage(
             ctx.message.chat.id,
-            `${resultPhrase} ${pidors[0].pidor?.userName}`
+            `${resultPhrase} ${pidors[0].userName}`
           );
         } else {
           ctx.telegram.sendMessage(
