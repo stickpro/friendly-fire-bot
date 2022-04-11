@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 async function run() {
   const bot = new Telegraf(telegramApiKey);
-  const {url: httpsHost, port: serverPort} = nconf.get("server");
+  const { url: httpsHost, port: serverPort } = nconf.get("server");
   bot.telegram.setWebhook(`${httpsHost}/secret-path`);
 
   // @ts-expect-error fixme
@@ -31,7 +31,7 @@ async function run() {
     }
   });
 
-  bot.command("pidor", async (ctx) => {
+  bot.command("pidorka", async (ctx) => {
     const chat = await prisma.chat.findFirst({
       where: { telegramChatId: ctx.message.chat.id },
     });
@@ -42,8 +42,11 @@ async function run() {
         where: {
           chatId: chat.id,
           assignedAt: {
-            gte: new Date(date),
+            gte: new Date(date * 1000),
           },
+        },
+        include: {
+          pidor: true,
         },
       });
       const pidorCount = await prisma.pidor.count({
@@ -51,20 +54,24 @@ async function run() {
       });
 
       const skip = Math.floor(Math.random() * pidorCount);
-      const pidors = await prisma.pidor.findMany({
+      const pidors = await prisma.chatPidors.findMany({
         take: 1,
         skip: skip,
         where: { chat: { id: chat.id } },
+        include: {
+          pidor: true,
+        },
         orderBy: {
-          id: "desc",
+          assignedAt: "desc",
         },
       });
+
       if (lastChatPidor.length <= 0) {
         if (pidors.length >= 1) {
           await prisma.chatPidors.create({
             data: {
               chatId: chat.id,
-              pidorId: pidors[0].id,
+              pidorId: pidors[0].pidor?.id,
             },
           });
 
@@ -82,29 +89,28 @@ async function run() {
 
           await ctx.telegram.sendMessage(
             ctx.message.chat.id,
-            `${resultPhrase} @${pidors[0].userName}`
+            `${resultPhrase} ${pidors[0].pidor?.userName}`
           );
         } else {
           ctx.telegram.sendMessage(
             ctx.message.chat.id,
-            "Никто не зарегистрировался для пидор дня /pidoreg"
+            "Никто не зарегистрировался для пидорка дня /pidorkareg"
           );
         }
       } else {
         ctx.telegram.sendMessage(
           ctx.message.chat.id,
-          `У нас уже есть пидор дня ${pidors[0].userName}`
+          `У нас уже есть пидор дня ${lastChatPidor[0].pidor?.userName}`
         );
-
       }
     } else {
       ctx.telegram.sendMessage(
         ctx.message.chat.id,
-        "Ну ты тупой, сначала команда /init напиши...."
+        "Ну ты тупой, сначала команду /init напиши...."
       );
     }
   });
-  bot.command("pidoreg", async (ctx, next) => {
+  bot.command("pidorkareg", async (ctx, next) => {
     try {
       const chat = await prisma.chat.findFirst({
         where: { telegramChatId: ctx.message.chat.id },
@@ -127,7 +133,7 @@ async function run() {
       ctx.telegram.sendMessage(ctx.message.chat.id, "Ты уже зареган дебилыч");
     }
   });
-  bot.command("pidorstat", async (ctx) => {
+  bot.command("pidorkastat", async (ctx) => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
 
@@ -247,6 +253,5 @@ const resultPhrases = [
   "Стоять! Не двигаться! Вы объявлены пидором дня, ",
   "И прекрасный человек дня сегодня... а нет, ошибка, всего-лишь пидор - ",
 ];
-
 
 run();
