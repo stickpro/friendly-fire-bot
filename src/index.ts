@@ -37,7 +37,7 @@ async function run() {
     });
 
     if (chat !== null) {
-      const date = Date.now() / 1000 - 86400;
+      const date = Date.now() / 1000 - 10;
       const lastChatPidor = await prisma.chatPidors.findMany({
         where: {
           chatId: chat.id,
@@ -65,6 +65,8 @@ async function run() {
           assignedAt: "desc",
         },
       });
+
+      console.log(pidors);
 
       if (lastChatPidor.length <= 0) {
         if (pidors.length >= 1) {
