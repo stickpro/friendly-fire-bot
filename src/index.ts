@@ -1,6 +1,7 @@
 import { Telegraf } from "telegraf";
 import nconf from "nconf";
 import { PrismaClient } from "@prisma/client";
+import { marked } from 'marked';
 
 nconf.file({ file: "config.json" });
 
@@ -18,20 +19,19 @@ async function run() {
 
   bot.command("init", async (ctx) => {
     // const chats = await prisma.chat.findMany();
-    // console.log(chats);
     try {
       const chat = await prisma.chat.create({
         data: {
           telegramChatId: ctx.message.chat.id,
         },
       });
-      ctx.telegram.sendMessage(ctx.message.chat.id, "ИГРА НАЧАЛАСЬ");
+      ctx.telegram.sendMessage(ctx.message.chat.id, "ВЕЧЕР В ХАТУ");
     } catch (error) {
       ctx.telegram.sendMessage(ctx.message.chat.id, "ИГРА УЖЕ НАЧАЛАСЬ");
     }
   });
 
-  bot.command("pidorka", async (ctx) => {
+  bot.command("cock", async (ctx) => {
     const chat = await prisma.chat.findFirst({
       where: { telegramChatId: ctx.message.chat.id },
     });
@@ -42,13 +42,14 @@ async function run() {
         where: {
           chatId: chat.id,
           assignedAt: {
-            gte: new Date(date * 1000),
+            gte: new Date(getDate()),
           },
         },
         include: {
           pidor: true,
         },
       });
+
       const pidorCount = await prisma.pidor.count({
         where: { chat: { id: chat.id } },
       });
@@ -61,9 +62,9 @@ async function run() {
         where: { chatId: chat.id },
       });
 
-      console.log(pidors);
-
       if (lastChatPidor.length <= 0) {
+     
+        
         if (pidors.length >= 1) {
           await prisma.chatPidors.create({
             data: {
@@ -74,30 +75,41 @@ async function run() {
 
           const teasePhrase =
             teasePhrases[Math.floor(Math.random() * teasePhrases.length)];
-
-          await Promise.all(
-            teasePhrase.map(async (item) => {
-              await ctx.telegram.sendMessage(ctx.message.chat.id, item);
-            })
-          );
-
           const resultPhrase =
             resultPhrases[Math.floor(Math.random() * resultPhrases.length)];
 
-          await ctx.telegram.sendMessage(
-            ctx.message.chat.id,
-            `${resultPhrase} ${pidors[0].userName}`
-          );
+          const awaitTimeout = (delay: number | undefined) =>
+            new Promise((resolve) => setTimeout(resolve, delay));
+
+          const f = async () => {
+            await awaitTimeout(300);
+            console.log("Hi"); // Logs 'Hi' after 300ms
+          };
+
+
+          ctx.telegram.sendMessage(ctx.message.chat.id, teasePhrase[0]);
+          setTimeout(() => ctx.telegram.sendMessage(ctx.message.chat.id, teasePhrase[1]), 2000);
+          setTimeout(() => ctx.telegram.sendMessage(ctx.message.chat.id, teasePhrase[2]), 4000);
+
+          setTimeout(() => {
+            ctx.telegram.sendMessage(
+              ctx.message.chat.id,
+              `${resultPhrase} <a href="tg://user?id=${pidors[0].telegramId}">${pidors[0].userName ?? pidors[0].name}</a>
+                `,
+              { parse_mode: "HTML" });
+          }, 6000)
+
         } else {
           ctx.telegram.sendMessage(
             ctx.message.chat.id,
-            "Никто не зарегистрировался для пидорка дня /pidorkareg"
+            "Никто не зарегистрировался для петуха дня /cockreg"
           );
         }
       } else {
         ctx.telegram.sendMessage(
           ctx.message.chat.id,
-          `У нас уже есть пидор дня ${lastChatPidor[0].pidor?.userName}`
+          `У нас уже есть петух дня <a href="tg://user?id=${lastChatPidor[0].pidor?.telegramId}">${lastChatPidor[0].pidor?.userName ?? lastChatPidor[0].pidor?.name}</a>`,
+          { parse_mode: "HTML" }
         );
       }
     } else {
@@ -107,7 +119,7 @@ async function run() {
       );
     }
   });
-  bot.command("pidorkareg", async (ctx, next) => {
+  bot.command("cockreg", async (ctx, next) => {
     try {
       const chat = await prisma.chat.findFirst({
         where: { telegramChatId: ctx.message.chat.id },
@@ -130,13 +142,12 @@ async function run() {
       ctx.telegram.sendMessage(ctx.message.chat.id, "Ты уже зареган дебилыч");
     }
   });
-  bot.command("pidorkastat", async (ctx) => {
+  bot.command("cockstat", async (ctx) => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
 
     try {
       const pidors = await prisma.pidor.findMany({
-        take: 10,
         where: {
           chat: {
             telegramChatId: ctx.message.chat.id,
@@ -156,22 +167,29 @@ async function run() {
         },
       });
 
-      let message = "Топ 10 *пидоров* этого чатика: \n\n";
+      let message = "Топ *петухов* этого чатика: \n\n";
       pidors.map((item, index) => {
-        message += `${index + 1}\\. ${item.name} \\- ${
-          item._count.pidor
-        } ${declOfNum(item._count.pidor, ["раз", "раза", "раз"])}\n`;
+        message += ` ${index + 1}. ${item.name} ([${item.userName ?? item.name}](tg://user?id=${item.telegramId})) - ${item._count.pidor
+          } ${declOfNum(item._count.pidor, ["раз", "раза", "раз"])}\n`;
       });
       ctx.telegram
-        .sendMessage(ctx.message.chat.id, message, { parse_mode: "MarkdownV2" })
+        .sendMessage(ctx.message.chat.id, marked.parseInline(message), { parse_mode: "HTML" })
         .then(() => {
           const sticker = stickers[Math.floor(Math.random() * stickers.length)];
           ctx.telegram.sendSticker(ctx.message.chat.id, sticker);
+          const prov = proverd[Math.floor(Math.random() * proverd.length)];
+          ctx.telegram.sendMessage(ctx.message.chat.id, prov);
+
         });
     } catch (err) {
       console.log("err", err);
     }
   });
+
+  bot.command("cockpos", async (ctx) => {
+    const prov = proverd[Math.floor(Math.random() * proverd.length)];
+    ctx.telegram.sendMessage(ctx.message.chat.id,  marked.parseInline(prov), { parse_mode: "HTML" });
+  })
 }
 
 function declOfNum(n: number, text_forms: any[]) {
@@ -228,7 +246,7 @@ const teasePhrases = [
     "Проверяю данные...",
   ],
   [
-    "Инициирую поиск пидора дня...",
+    "Инициирую поиск петуха дня...",
     "Машины выехали",
     "Так-так, что же тут у нас...",
   ],
@@ -240,15 +258,41 @@ const teasePhrases = [
 ];
 
 const resultPhrases = [
-  "А вот и пидор - ",
-  "Вот ты и пидор, ",
-  "Ну ты и пидор, ",
-  "Сегодня ты пидор, ",
-  "Анализ завершен, сегодня ты пидор, ",
-  "ВЖУХ И ТЫ ПИДОР, ",
-  "Пидор дня обыкновенный, 1шт. - ",
-  "Стоять! Не двигаться! Вы объявлены пидором дня, ",
-  "И прекрасный человек дня сегодня... а нет, ошибка, всего-лишь пидор - ",
+  "А вот и петух - ",
+  "Вот ты и петух, ",
+  "Ну ты и петух, ",
+  "Сегодня ты петух, ",
+  "Анализ завершен, сегодня ты петух, ",
+  "ВЖУХ И ТЫ ПЕТУХ, ",
+  "Петух дня обыкновенный, 1шт. - ",
+  "Стоять! Не двигаться! Вы объявлены петухом дня, ",
+  "И прекрасный человек дня сегодня... а нет, ошибка, всего-лишь петух - ",
 ];
+
+const proverd = [
+  "Петуху ячменное зернышко жемчужины дороже.", 
+  "Петушьим гребнем голову не расчешешь.", 
+  "У кого счастье поведётся, у того и петух несется.", 
+  "Наш петушок не нажил гребешок, а туда же кукарекает.", 
+  "Молодой петух поёт так, как от старого слышал.", 
+  "Петух прокукарекал – а там, хоть не рассветай.", 
+  "С курами ложится, с петухами встаёт.", 
+  "Петух скажет курице, а она всей улице.", 
+  "Петух рад лету, пчела – цвету.",
+  "Чужие петухи поют, а на наш типун напал.",
+  "Петуха на зарез несут, а он кричит кукареку.",
+  "Петух пробуждается рано; но злодей ещё раньше.", 
+  "Всяк петух на своём пепелище хозяин.", 
+  "И петух знает, кто на него лает.", 
+  "Курице не петь петухом.", 
+  "Силёнка, что у цыплёнка.", 
+  "Цыплят по осени считают"
+];
+
+const getDate = (givenDate = new Date()): string => {
+  const offset = givenDate.getTimezoneOffset();
+  givenDate = new Date(givenDate.getTime() - offset * 60 * 1000);
+  return givenDate.toISOString().split('T')[0];
+};
 
 run();
